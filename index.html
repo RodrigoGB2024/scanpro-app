@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ScanPro Mobile</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --primary: #0ea5e9;
+  --primary-dark: #0284c7;
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-elevated: #334155;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #475569;
+  --success: #10b981;
+  --danger: #ef4444;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Header Compacto Mobile */
+header {
+  background: var(--bg-card);
+  padding: calc(env(safe-area-inset-top, 0px) + 0.6rem) 1rem 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 50;
+}
+
+.logo-area { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.1rem; }
+.logo-badge { background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+
+/* Botões */
+.btn {
+  padding: 0.5rem 0.85rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: white;
+}
+.btn-primary { background: var(--primary); }
+.btn-secondary { background: var(--bg-elevated); color: var(--text); }
+.btn-success { background: var(--success); }
+.btn-danger { background: var(--danger); }
+
+/* Área Principal */
+main {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tela Inicial / Boas-vindas */
+.landing-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.landing-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary), #6366f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.action-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 1.5rem;
+}
+
+/* Editor Mobile */
+.editor-view {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+}
+
+.canvas-viewport {
+  flex: 1;
+  background: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.canvas-wrapper {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+#mainCanvas {
+  max-width: 95vw;
+  max-height: 60vh;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+
+#cropOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* Painel de Controles Inferior */
+.bottom-controls {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 1rem calc(env(safe-area-inset-bottom, 0px) + 0.75rem) 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.toolbar-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: none;
+}
+.toolbar-scroll::-webkit-scrollbar { display: none; }
+
+.filter-chip {
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+.filter-chip.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Câmera Mobile Fullscreen */
+.camera-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 1000;
+  flex-direction: column;
+}
+.camera-overlay.active { display: flex; }
+#cameraVideo { flex: 1; width: 100%; object-fit: cover; }
+.camera-bottom {
+  height: 120px;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.shutter-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 4px solid white;
+  background: var(--primary);
+}
+
+.toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--primary);
+  color: var(--text);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  z-index: 2000;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <span>📐 ScanPro</span>
+    <span class="logo-badge">MOBILE</span>
+  </div>
+  <div id="headerActions" style="display:none;">
+    <button class="btn btn-secondary" onclick="addNewPage()">➕</button>
+    <button class="btn btn-primary" onclick="exportAsPDF()">PDF</button>
+  </div>
+</header>
+
+<main>
+  <!-- Landing / Início -->
+  <div class="landing-view" id="landingView">
+    <div class="landing-icon">📸</div>
+    <h2>CamScanner Web App</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.4rem;">
+      Digitalize documentos com correção de 4 pontos e realce de texto.
+    </p>
+    
+    <div class="action-cards">
+      <button class="btn btn-primary" style="padding:0.9rem; justify-content:center;" onclick="openCamera()">
+        📷 Abrir Câmera
+      </button>
+      <button class="btn btn-secondary" style="padding:0.9rem; justify-content:center;" onclick="document.getElementById('fileInput').click()">
+        📁 Escolher da Galeria
+      </button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+  </div>
+
+  <!-- Editor -->
+  <div class="editor-view" id="editorView">
+    <div class="canvas-viewport">
+      <div class="canvas-wrapper">
+        <canvas id="mainCanvas"></canvas>
+        <canvas id="cropOverlay"></canvas>
+      </div>
+    </div>
+
+    <div class="bottom-controls">
+      <!-- Filtros CamScanner -->
+      <div class="toolbar-scroll">
+        <div class="filter-chip active" data-filter="magic" onclick="setFilter('magic')">✨ Mágico</div>
+        <div class="filter-chip" data-filter="document" onclick="setFilter('document')">📄 P&B Puro</div>
+        <div class="filter-chip" data-filter="grayscale" onclick="setFilter('grayscale')">🪙 Cinza</div>
+        <div class="filter-chip" data-filter="original" onclick="setFilter('original')">🖼️ Original</div>
+      </div>
+
+      <!-- Barra de Ações -->
+      <div class="action-row">
+        <button class="btn btn-secondary" id="cropToggleBtn" onclick="togglePerspectiveCrop()">📐 Ajustar Quinas</button>
+        <button class="btn btn-success" id="applyCropBtn" onclick="applyPerspectiveCrop()" style="display:none;">✔️ Confirmar</button>
+        <button class="btn btn-secondary" onclick="rotateImage(90)">↻ Girar</button>
+        <button class="btn btn-danger" onclick="deleteCurrentPage()">🗑️</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Câmera Modal -->
+<div class="camera-overlay" id="cameraModal">
+  <video id="cameraVideo" autoplay playsinline></video>
+  <div class="camera-bottom">
+    <button class="btn btn-secondary" onclick="closeCamera()">✕ Fechar</button>
+    <button class="shutter-btn" onclick="capturePhoto()"></button>
+    <button class="btn btn-secondary" onclick="switchCamera()">🔄 Lente</button>
+  </div>
+</div>
+
+<script>
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+const state = {
+  pages: [],
+  currentPageIndex: 0,
+  cropMode: false,
+  corners: [],
+  activeHandle: -1,
+  cameraStream: null,
+  cameraFacing: 'environment'
+};
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const overlay = document.getElementById('cropOverlay');
+const octx = overlay.getContext('2d');
+const fileInput = document.getElementById('fileInput');
+
+fileInput.addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length) loadFiles(files);
+});
+
+function loadFiles(files) {
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        state.pages.push({
+          sourceImage: img,
+          rotation: 0,
+          filter: 'magic'
+        });
+        loaded++;
+        if (loaded === files.length) {
+          state.currentPageIndex = state.pages.length - files.length;
+          showEditor();
+          renderCanvas();
+        }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function showEditor() {
+  document.getElementById('landingView').style.display = 'none';
+  document.getElementById('editorView').style.display = 'flex';
+  document.getElementById('headerActions').style.display = 'flex';
+}
+
+function renderCanvas() {
+  if (!state.pages.length) return;
+  const page = state.pages[state.currentPageIndex];
+  const img = page.sourceImage;
+  const isRot = (page.rotation % 180 !== 0);
+
+  canvas.width = isRot ? img.naturalHeight || img.height : img.naturalWidth || img.width;
+  canvas.height = isRot ? img.naturalWidth || img.width : img.naturalHeight || img.height;
+
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((page.rotation * Math.PI) / 180);
+  ctx.drawImage(img, -(img.naturalWidth || img.width) / 2, -(img.naturalHeight || img.height) / 2);
+  ctx.restore();
+
+  applyMagicPipeline(canvas, ctx, page.filter);
+
+  overlay.width = canvas.clientWidth;
+  overlay.height = canvas.clientHeight;
+  if (state.cropMode) drawCropOverlay();
+}
+
+// Algoritmo Magic Color CamScanner
+function applyMagicPipeline(c, context, filter) {
+  if (filter === 'original') return;
+  const imgData = context.getImageData(0, 0, c.width, c.height);
+  const data = imgData.data;
+  const len = data.length;
+
+  for (let i = 0; i < len; i += 4) {
+    let r = data[i], g = data[i+1], b = data[i+2];
+    let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    if (filter === 'magic') {
+      let boost = gray > 125 ? (gray - 125) * 1.85 : 0;
+      let val = Math.min(255, gray + boost);
+      if (val < 115) val = val * 0.72;
+      data[i] = data[i+1] = data[i+2] = val;
+    } else if (filter === 'document') {
+      let val = gray > 135 ? 255 : 0;
+      data[i] = data[i+1] = data[i+2] = val;
+    } else if (filter === 'grayscale') {
+      data[i] = data[i+1] = data[i+2] = gray;
+    }
+  }
+  context.putImageData(imgData, 0, 0);
+}
+
+// Perspectiva Touch (4 Quinas)
+function togglePerspectiveCrop() {
+  state.cropMode = !state.cropMode;
+  document.getElementById('applyCropBtn').style.display = state.cropMode ? 'inline-flex' : 'none';
+  document.getElementById('cropToggleBtn').classList.toggle('btn-primary', state.cropMode);
+
+  if (state.cropMode) {
+    const w = canvas.width, h = canvas.height;
+    state.corners = [
+      { x: w * 0.08, y: h * 0.08 },
+      { x: w * 0.92, y: h * 0.08 },
+      { x: w * 0.92, y: h * 0.92 },
+      { x: w * 0.08, y: h * 0.92 }
+    ];
+    drawCropOverlay();
+    showToast("Arraste os círculos até os cantos do papel");
+  } else {
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+  }
+}
+
+function drawCropOverlay() {
+  octx.clearRect(0, 0, overlay.width, overlay.height);
+  if (!state.cropMode) return;
+
+  const sx = overlay.width / canvas.width;
+  const sy = overlay.height / canvas.height;
+
+  octx.beginPath();
+  octx.moveTo(state.corners[0].x * sx, state.corners[0].y * sy);
+  for (let i = 1; i < 4; i++) octx.lineTo(state.corners[i].x * sx, state.corners[i].y * sy);
+  octx.closePath();
+
+  octx.fillStyle = 'rgba(14, 165, 233, 0.2)';
+  octx.fill();
+  octx.strokeStyle = '#0ea5e9';
+  octx.lineWidth = 3;
+  octx.stroke();
+
+  state.corners.forEach((pt) => {
+    octx.beginPath();
+    octx.arc(pt.x * sx, pt.y * sy, 16, 0, Math.PI * 2);
+    octx.fillStyle = '#ffffff';
+    octx.fill();
+    octx.strokeStyle = '#0284c7';
+    octx.lineWidth = 3;
+    octx.stroke();
+  });
+}
+
+function getTouchPos(e) {
+  const rect = overlay.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return {
+    x: (t.clientX - rect.left) * (canvas.width / overlay.width),
+    y: (t.clientY - rect.top) * (canvas.height / overlay.height)
+  };
+}
+
+function onTouchStart(e) {
+  if (!state.cropMode) return;
+  const pos = getTouchPos(e);
+  const sx = overlay.width / canvas.width;
+  const sy = overlay.height / canvas.height;
+
+  state.activeHandle = -1;
+  state.corners.forEach((pt, i) => {
+    if (Math.hypot((pt.x - pos.x) * sx, (pt.y - pos.y) * sy) < 40) {
+      state.activeHandle = i;
+    }
+  });
+}
+
+function onTouchMove(e) {
+  if (!state.cropMode || state.activeHandle === -1) return;
+  const pos = getTouchPos(e);
+  state.corners[state.activeHandle] = {
+    x: Math.max(0, Math.min(canvas.width, pos.x)),
+    y: Math.max(0, Math.min(canvas.height, pos.y))
+  };
+  drawCropOverlay();
+}
+
+overlay.addEventListener('touchstart', onTouchStart, { passive: false });
+window.addEventListener('touchmove', onTouchMove, { passive: false });
+window.addEventListener('touchend', () => { state.activeHandle = -1; });
+overlay.addEventListener('mousedown', onTouchStart);
+window.addEventListener('mousemove', onTouchMove);
+window.addEventListener('mouseup', () => { state.activeHandle = -1; });
+
+function applyPerspectiveCrop() {
+  const [tl, tr, br, bl] = state.corners;
+  const fw = Math.round(Math.max(Math.hypot(tr.x - tl.x, tr.y - tl.y), Math.hypot(br.x - bl.x, br.y - bl.y)));
+  const fh = Math.round(Math.max(Math.hypot(bl.x - tl.x, bl.y - tl.y), Math.hypot(br.x - tr.x, br.y - tr.y)));
+
+  const srcPixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const destCanvas = document.createElement('canvas');
+  destCanvas.width = fw;
+  destCanvas.height = fh;
+  const destCtx = destCanvas.getContext('2d');
+  const destData = destCtx.createImageData(fw, fh);
+  const dstPixels = destData.data;
+
+  for (let y = 0; y < fh; y++) {
+    const v = y / (fh - 1);
+    for (let x = 0; x < fw; x++) {
+      const u = x / (fw - 1);
+      const sx = Math.floor((1 - u) * (1 - v) * tl.x + u * (1 - v) * tr.x + u * v * br.x + (1 - u) * v * bl.x);
+      const sy = Math.floor((1 - u) * (1 - v) * tl.y + u * (1 - v) * tr.y + u * v * br.y + (1 - u) * v * bl.y);
+
+      if (sx >= 0 && sx < canvas.width && sy >= 0 && sy < canvas.height) {
+        const sIdx = (sy * canvas.width + sx) * 4;
+        const dIdx = (y * fw + x) * 4;
+        dstPixels[dIdx] = srcPixels[sIdx];
+        dstPixels[dIdx+1] = srcPixels[sIdx+1];
+        dstPixels[dIdx+2] = srcPixels[sIdx+2];
+        dstPixels[dIdx+3] = 255;
+      }
+    }
+  }
+
+  destCtx.putImageData(destData, 0, 0);
+  const cropped = new Image();
+  cropped.onload = () => {
+    state.pages[state.currentPageIndex].sourceImage = cropped;
+    state.pages[state.currentPageIndex].rotation = 0;
+    togglePerspectiveCrop();
+    renderCanvas();
+    showToast("Perspectiva alinhada!");
+  };
+  cropped.src = destCanvas.toDataURL();
+}
+
+// Câmera Mobile
+async function openCamera() {
+  try {
+    state.cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: state.cameraFacing, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    document.getElementById('cameraVideo').srcObject = state.cameraStream;
+    document.getElementById('cameraModal').classList.add('active');
+  } catch (e) {
+    showToast("Erro ao abrir a câmera");
+  }
+}
+
+function closeCamera() {
+  if (state.cameraStream) state.cameraStream.getTracks().forEach(t => t.stop());
+  document.getElementById('cameraModal').classList.remove('active');
+}
+
+async function switchCamera() {
+  state.cameraFacing = state.cameraFacing === 'environment' ? 'user' : 'environment';
+  closeCamera();
+  openCamera();
+}
+
+function capturePhoto() {
+  const video = document.getElementById('cameraVideo');
+  const temp = document.createElement('canvas');
+  temp.width = video.videoWidth;
+  temp.height = video.videoHeight;
+  temp.getContext('2d').drawImage(video, 0, 0);
+
+  const img = new Image();
+  img.onload = () => {
+    state.pages.push({ sourceImage: img, rotation: 0, filter: 'magic' });
+    closeCamera();
+    state.currentPageIndex = state.pages.length - 1;
+    showEditor();
+    renderCanvas();
+    togglePerspectiveCrop();
+  };
+  img.src = temp.toDataURL('image/jpeg', 0.95);
+}
+
+function setFilter(f) {
+  state.pages[state.currentPageIndex].filter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  renderCanvas();
+}
+
+function rotateImage(deg) {
+  state.pages[state.currentPageIndex].rotation = (state.pages[state.currentPageIndex].rotation + deg) % 360;
+  renderCanvas();
+}
+
+function addNewPage() { fileInput.click(); }
+
+function deleteCurrentPage() {
+  state.pages.splice(state.currentPageIndex, 1);
+  if (!state.pages.length) location.reload();
+  else {
+    state.currentPageIndex = Math.max(0, state.currentPageIndex - 1);
+    renderCanvas();
+  }
+}
+
+function exportAsPDF() {
+  showToast("Compilando PDF...");
+  const { jsPDF } = window.jspdf;
+  let doc = null;
+
+  state.pages.forEach((page, idx) => {
+    const temp = document.createElement('canvas');
+    const tCtx = temp.getContext('2d');
+    temp.width = page.sourceImage.width;
+    temp.height = page.sourceImage.height;
+    tCtx.drawImage(page.sourceImage, 0, 0);
+    applyMagicPipeline(temp, tCtx, page.filter);
+
+    const orient = temp.width > temp.height ? 'l' : 'p';
+    if (idx === 0) doc = new jsPDF({ orientation: orient, unit: 'px', format: [temp.width, temp.height] });
+    else doc.addPage([temp.width, temp.height], orient);
+
+    doc.addImage(temp.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, temp.width, temp.height, undefined, 'FAST');
+  });
+
+  doc.save(`ScanPro_${Date.now()}.pdf`);
+  showToast("PDF baixado com sucesso!");
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerText = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+</script>
+</body>
+</html>
